@@ -3,21 +3,15 @@ package config
 import (
 	"fmt"
 	"os"
-	"reflect"
 )
 
 // applyEnvOverrides walks the fields of out's underlying struct and, for
 // each field tagged with `env:"NAME"`, sets the field from the named
 // environment variable if it is present.
 func applyEnvOverrides(out interface{}) error {
-	v := reflect.ValueOf(out)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return fmt.Errorf("out must be a non-nil pointer to a struct")
-	}
-
-	v = v.Elem()
-	if v.Kind() != reflect.Struct {
-		return fmt.Errorf("out must point to a struct")
+	v, err := structValue(out)
+	if err != nil {
+		return err
 	}
 
 	t := v.Type()

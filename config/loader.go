@@ -13,6 +13,10 @@ import (
 // tagged with `env:"NAME"` using the value of that environment variable,
 // if set. out must be a non-nil pointer to a struct.
 func Load(path string, out interface{}) error {
+	if _, err := structValue(out); err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("config: read file: %w", err)

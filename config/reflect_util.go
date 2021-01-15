@@ -6,6 +6,22 @@ import (
 	"strconv"
 )
 
+// structValue validates that out is a non-nil pointer to a struct and
+// returns the dereferenced struct value.
+func structValue(out interface{}) (reflect.Value, error) {
+	v := reflect.ValueOf(out)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return reflect.Value{}, fmt.Errorf("out must be a non-nil pointer to a struct")
+	}
+
+	v = v.Elem()
+	if v.Kind() != reflect.Struct {
+		return reflect.Value{}, fmt.Errorf("out must point to a struct")
+	}
+
+	return v, nil
+}
+
 // setFieldFromString converts raw into the appropriate type for field and
 // sets it. field must be addressable and settable.
 func setFieldFromString(field reflect.Value, raw string) error {
