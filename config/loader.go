@@ -3,16 +3,30 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
-// Load reads the YAML file at path into out, then overrides any field
-// tagged with `env:"NAME"` using the value of that environment variable,
-// if set. out must be a non-nil pointer to a struct.
+// Load reads the config file at path, detecting its format (YAML or JSON)
+// from the file extension, into out, then overrides any field tagged with
+// `env:"NAME"` using the value of that environment variable, if set. out
+// must be a non-nil pointer to a struct.
 func Load(path string, out interface{}) error {
+	format, err := detectFormat(path)
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+
+	return LoadFormat(path, format, out)
+}
+
+// LoadFormat behaves like Load but uses the given format explicitly
+// instead of inferring it from the file extension. This is useful when a
+// config file does not have a conventional extension.
+func LoadFormat(path string, format Format, out interface{}) error {
 	if _, err := structValue(out); err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
@@ -22,8 +36,17 @@ func Load(path string, out interface{}) error {
 		return fmt.Errorf("config: read file: %w", err)
 	}
 
-	if err := yaml.Unmarshal(data, out); err != nil {
-		return fmt.Errorf("config: parse yaml: %w", err)
+	switch format {
+	case FormatYAML:
+		if err := yaml.Unmarshal(data, out); err != nil {
+			return fmt.Errorf("config: parse yaml: %w", err)
+		}
+	case FormatJSON:
+		if err := json.Unmarshal(data, out); err != nil {
+			return fmt.Errorf("config: parse json: %w", err)
+		}
+	default:
+		return fmt.Errorf("config: unsupported format %q", format)
 	}
 
 	if err := applyEnvOverrides(out); err != nil {
