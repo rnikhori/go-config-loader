@@ -57,6 +57,59 @@ func TestLoadYAMLWithEnvOverride(t *testing.T) {
 	}
 }
 
+func TestLoadJSON(t *testing.T) {
+	path := writeTempFile(t, "config.json", `{"port": 8081, "host": "example.com", "debug": true}`)
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if cfg.Port != 8081 || cfg.Host != "example.com" || cfg.Debug != true {
+		t.Fatalf("unexpected config: %+v", cfg)
+	}
+}
+
+func TestLoadJSONWithEnvOverride(t *testing.T) {
+	path := writeTempFile(t, "config.json", `{"port": 8081, "host": "example.com"}`)
+
+	t.Setenv("TEST_APP_PORT", "7070")
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if cfg.Port != 7070 {
+		t.Errorf("Port = %d, want 7070 (env override)", cfg.Port)
+	}
+	if cfg.Host != "example.com" {
+		t.Errorf("Host = %q, want example.com (from file)", cfg.Host)
+	}
+}
+
+func TestLoadFormatExplicit(t *testing.T) {
+	path := writeTempFile(t, "config.cfg", `{"port": 1234, "host": "explicit"}`)
+
+	var cfg testAppConfig
+	if err := LoadFormat(path, FormatJSON, &cfg); err != nil {
+		t.Fatalf("LoadFormat returned error: %v", err)
+	}
+
+	if cfg.Port != 1234 || cfg.Host != "explicit" {
+		t.Fatalf("unexpected config: %+v", cfg)
+	}
+}
+
+func TestLoadUnrecognizedExtension(t *testing.T) {
+	path := writeTempFile(t, "config.cfg", "port: 8080\n")
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err == nil {
+		t.Fatal("expected error for unrecognized extension, got nil")
+	}
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	var cfg testAppConfig
 	if err := Load(filepath.Join(t.TempDir(), "missing.yaml"), &cfg); err == nil {
