@@ -110,6 +110,37 @@ func TestLoadUnrecognizedExtension(t *testing.T) {
 	}
 }
 
+type testDBConfig struct {
+	Host string `yaml:"host" json:"host" env:"TEST_DB_HOST"`
+	Port int    `yaml:"port" json:"port" env:"TEST_DB_PORT"`
+}
+
+type testNestedConfig struct {
+	Name string       `yaml:"name" json:"name" env:"TEST_APP_NAME"`
+	DB   testDBConfig `yaml:"db" json:"db"`
+}
+
+func TestLoadNestedStructEnvOverride(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "name: myapp\ndb:\n  host: dbhost\n  port: 5432\n")
+
+	t.Setenv("TEST_DB_PORT", "6543")
+
+	var cfg testNestedConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if cfg.Name != "myapp" {
+		t.Errorf("Name = %q, want myapp", cfg.Name)
+	}
+	if cfg.DB.Host != "dbhost" {
+		t.Errorf("DB.Host = %q, want dbhost (from file)", cfg.DB.Host)
+	}
+	if cfg.DB.Port != 6543 {
+		t.Errorf("DB.Port = %d, want 6543 (env override)", cfg.DB.Port)
+	}
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	var cfg testAppConfig
 	if err := Load(filepath.Join(t.TempDir(), "missing.yaml"), &cfg); err == nil {
