@@ -1,5 +1,7 @@
-// Package config loads configuration from a file and overlays
-// matching environment variables on top, with env vars taking precedence.
+// Package config loads configuration from a file, overlays matching
+// environment variables on top, and fills any still-unset fields with
+// their declared defaults. Precedence, highest to lowest: env vars,
+// file values, defaults.
 package config
 
 import (
@@ -51,6 +53,10 @@ func LoadFormat(path string, format Format, out interface{}) error {
 
 	if err := applyEnvOverrides(out); err != nil {
 		return fmt.Errorf("config: apply env overrides: %w", err)
+	}
+
+	if err := applyDefaults(out); err != nil {
+		return fmt.Errorf("config: apply defaults: %w", err)
 	}
 
 	return nil
