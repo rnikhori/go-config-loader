@@ -41,6 +41,18 @@ If a file's extension isn't `.yaml`, `.yml`, or `.json`, use `config.LoadFormat`
 config.LoadFormat("config.cfg", config.FormatJSON, &cfg)
 ```
 
+## Defaults
+
+A field tagged with `default:"..."` is filled in with that value if it is still at its zero value after the file and env layers have been applied:
+
+```go
+type AppConfig struct {
+	Port int `yaml:"port" env:"PORT" default:"8080"`
+}
+```
+
+Since the default only applies when a field is at its zero value, a default cannot be distinguished from an explicit zero in the file (e.g. `port: 0`) — both result in the default being applied. Use a non-zero sentinel or a pointer type if that distinction matters for your field.
+
 ## Running
 
 ```sh
