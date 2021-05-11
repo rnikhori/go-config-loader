@@ -3,7 +3,9 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
+	"time"
 )
 
 type testAppConfig struct {
@@ -138,6 +140,46 @@ func TestLoadNestedStructEnvOverride(t *testing.T) {
 	}
 	if cfg.DB.Port != 6543 {
 		t.Errorf("DB.Port = %d, want 6543 (env override)", cfg.DB.Port)
+	}
+}
+
+type testSliceDurationConfig struct {
+	Tags    []string      `yaml:"tags" env:"TEST_TAGS"`
+	Timeout time.Duration `yaml:"timeout" env:"TEST_TIMEOUT"`
+}
+
+func TestLoadSliceAndDurationFromFile(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "tags: [alpha, beta]\ntimeout: 5s\n")
+
+	var cfg testSliceDurationConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if !reflect.DeepEqual(cfg.Tags, []string{"alpha", "beta"}) {
+		t.Errorf("Tags = %v, want [alpha beta]", cfg.Tags)
+	}
+	if cfg.Timeout != 5*time.Second {
+		t.Errorf("Timeout = %v, want 5s", cfg.Timeout)
+	}
+}
+
+func TestLoadSliceAndDurationFromEnv(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "tags: [alpha]\ntimeout: 5s\n")
+
+	t.Setenv("TEST_TAGS", "x,y,z")
+	t.Setenv("TEST_TIMEOUT", "2m")
+
+	var cfg testSliceDurationConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if !reflect.DeepEqual(cfg.Tags, []string{"x", "y", "z"}) {
+		t.Errorf("Tags = %v, want [x y z]", cfg.Tags)
+	}
+	if cfg.Timeout != 2*time.Minute {
+		t.Errorf("Timeout = %v, want 2m", cfg.Timeout)
 	}
 }
 
