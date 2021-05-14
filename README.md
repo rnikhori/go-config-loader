@@ -41,6 +41,22 @@ If a file's extension isn't `.yaml`, `.yml`, or `.json`, use `config.LoadFormat`
 config.LoadFormat("config.cfg", config.FormatJSON, &cfg)
 ```
 
+## Nested structs
+
+Nested (including embedded) struct fields are walked recursively, so each level of nesting can carry its own tags:
+
+```go
+type DBConfig struct {
+	Host string `yaml:"host" env:"DB_HOST"`
+	Port int    `yaml:"port" env:"DB_PORT" default:"5432"`
+}
+
+type AppConfig struct {
+	Name string   `yaml:"name" env:"APP_NAME"`
+	DB   DBConfig `yaml:"db"`
+}
+```
+
 ## Defaults
 
 A field tagged with `default:"..."` is filled in with that value if it is still at its zero value after the file and env layers have been applied:
@@ -52,6 +68,22 @@ type AppConfig struct {
 ```
 
 Since the default only applies when a field is at its zero value, a default cannot be distinguished from an explicit zero in the file (e.g. `port: 0`) — both result in the default being applied. Use a non-zero sentinel or a pointer type if that distinction matters for your field.
+
+## Supported field kinds
+
+Besides strings, bools, and numeric types, the following kinds are supported for file parsing, env overrides, and defaults:
+
+| Go type         | File syntax (YAML/JSON) | Env/default syntax         |
+|-----------------|--------------------------|------------------------------|
+| `[]string`      | native list              | comma-separated, e.g. `"a,b,c"` |
+| `time.Duration` | string, e.g. `"30s"`     | string, e.g. `"30s"` (parsed with `time.ParseDuration`) |
+
+```go
+type AppConfig struct {
+	Tags    []string      `yaml:"tags" env:"TAGS"`
+	Timeout time.Duration `yaml:"timeout" env:"TIMEOUT" default:"30s"`
+}
+```
 
 ## Running
 
