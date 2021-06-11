@@ -41,6 +41,27 @@ If a file's extension isn't `.yaml`, `.yml`, or `.json`, use `config.LoadFormat`
 config.LoadFormat("config.cfg", config.FormatJSON, &cfg)
 ```
 
+## Command-line flags
+
+A field tagged with `flag:"name"` can be overridden from the command line, taking precedence over env vars, the file, and defaults:
+
+```go
+type AppConfig struct {
+	Port int `yaml:"port" env:"PORT" flag:"port" default:"8080"`
+}
+
+var cfg AppConfig
+config.LoadWithFlags("config.yaml", &cfg, os.Args[1:])
+```
+
+```sh
+go run . -port=9090
+```
+
+Only flags actually present in the given args are applied — an absent flag leaves the field as set by the env/file/default layers. `Load` and `LoadFormat` do not parse flags at all (equivalent to passing nil args); use `LoadWithFlags` or `LoadFormatWithFlags` to opt in.
+
+Full precedence, highest to lowest: **flags > env > file > defaults**.
+
 ## Nested structs
 
 Nested (including embedded) struct fields are walked recursively, so each level of nesting can carry its own tags:
