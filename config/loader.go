@@ -1,7 +1,8 @@
 // Package config loads configuration from a file, overlays matching
-// environment variables and command-line flags on top, and fills any
-// still-unset fields with their declared defaults. Precedence, highest
-// to lowest: flags, env vars, file values, defaults.
+// environment variables and command-line flags on top, fills any
+// still-unset fields with their declared defaults, and validates that
+// required fields ended up set. Precedence, highest to lowest: flags,
+// env vars, file values, defaults.
 package config
 
 import (
@@ -81,6 +82,10 @@ func LoadFormatWithFlags(path string, format Format, out interface{}, args []str
 
 	if err := applyDefaults(out); err != nil {
 		return fmt.Errorf("config: apply defaults: %w", err)
+	}
+
+	if err := validateRequired(out); err != nil {
+		return err
 	}
 
 	return nil
