@@ -90,6 +90,27 @@ type AppConfig struct {
 
 Since the default only applies when a field is at its zero value, a default cannot be distinguished from an explicit zero in the file (e.g. `port: 0`) — both result in the default being applied. Use a non-zero sentinel or a pointer type if that distinction matters for your field.
 
+## Required fields
+
+A field tagged with `validate:"required"` must end up non-zero after every other layer (file, env, flags, defaults) has been applied. If any required fields are still unset, `Load` returns a `*config.MissingFieldsError` listing all of them (not just the first one found), with nested fields reported as dotted paths like `DB.Host`:
+
+```go
+type AppConfig struct {
+	Host string `yaml:"host" validate:"required"`
+}
+
+var cfg AppConfig
+if err := config.Load("config.yaml", &cfg); err != nil {
+	var missing *config.MissingFieldsError
+	if errors.As(err, &missing) {
+		log.Fatalf("missing required config: %v", missing.Fields)
+	}
+	log.Fatal(err)
+}
+```
+
+A default satisfies a required field as long as it leaves the field non-zero, since validation runs after defaults are applied.
+
 ## Supported field kinds
 
 Besides strings, bools, and numeric types, the following kinds are supported for file parsing, env overrides, and defaults:
