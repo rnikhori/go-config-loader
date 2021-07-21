@@ -52,21 +52,14 @@ func applyFlagOverrides(out interface{}, args []string) error {
 // converted by setFieldFromString once we know which flags were actually
 // set by the caller.
 func registerFlags(fs *flag.FlagSet, v reflect.Value, bindings map[string]reflect.Value) {
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldVal := v.Field(i)
-
-		if fieldVal.Kind() == reflect.Struct {
-			registerFlags(fs, fieldVal, bindings)
-		}
-
+	walkFields(v, "", func(field reflect.StructField, fieldVal reflect.Value, path string) error {
 		flagName := field.Tag.Get("flag")
 		if flagName == "" {
-			continue
+			return nil
 		}
 
 		bindings[flagName] = fieldVal
 		fs.String(flagName, "", fmt.Sprintf("overrides %s", field.Name))
-	}
+		return nil
+	})
 }

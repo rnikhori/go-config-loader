@@ -14,34 +14,20 @@ func applyDefaults(out interface{}) error {
 		return err
 	}
 
-	return applyDefaultsToStruct(v)
-}
-
-func applyDefaultsToStruct(v reflect.Value) error {
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldVal := v.Field(i)
-
-		if fieldVal.Kind() == reflect.Struct {
-			if err := applyDefaultsToStruct(fieldVal); err != nil {
-				return fmt.Errorf("%s: %w", field.Name, err)
-			}
-		}
-
+	return walkFields(v, "", func(field reflect.StructField, fieldVal reflect.Value, path string) error {
 		defaultVal, ok := field.Tag.Lookup("default")
 		if !ok {
-			continue
+			return nil
 		}
 
 		if !fieldVal.IsZero() {
-			continue
+			return nil
 		}
 
 		if err := setFieldFromString(fieldVal, defaultVal); err != nil {
-			return fmt.Errorf("field %s: %w", field.Name, err)
+			return fmt.Errorf("field %s: %w", path, err)
 		}
-	}
 
-	return nil
+		return nil
+	})
 }

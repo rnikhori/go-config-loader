@@ -28,31 +28,16 @@ func validateRequired(out interface{}) error {
 	}
 
 	var missing []string
-	collectMissingRequired(v, "", &missing)
+	walkFields(v, "", func(field reflect.StructField, fieldVal reflect.Value, path string) error {
+		if field.Tag.Get("validate") == "required" && fieldVal.IsZero() {
+			missing = append(missing, path)
+		}
+		return nil
+	})
 
 	if len(missing) > 0 {
 		return &MissingFieldsError{Fields: missing}
 	}
 
 	return nil
-}
-
-func collectMissingRequired(v reflect.Value, prefix string, missing *[]string) {
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldVal := v.Field(i)
-		path := field.Name
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-
-		if fieldVal.Kind() == reflect.Struct {
-			collectMissingRequired(fieldVal, path, missing)
-		}
-
-		if field.Tag.Get("validate") == "required" && fieldVal.IsZero() {
-			*missing = append(*missing, path)
-		}
-	}
 }

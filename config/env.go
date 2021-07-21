@@ -17,35 +17,21 @@ func applyEnvOverrides(out interface{}) error {
 		return err
 	}
 
-	return applyEnvOverridesToStruct(v)
-}
-
-func applyEnvOverridesToStruct(v reflect.Value) error {
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldVal := v.Field(i)
-
-		if fieldVal.Kind() == reflect.Struct {
-			if err := applyEnvOverridesToStruct(fieldVal); err != nil {
-				return fmt.Errorf("%s: %w", field.Name, err)
-			}
-		}
-
+	return walkFields(v, "", func(field reflect.StructField, fieldVal reflect.Value, path string) error {
 		envKey := field.Tag.Get("env")
 		if envKey == "" {
-			continue
+			return nil
 		}
 
 		envVal, ok := os.LookupEnv(envKey)
 		if !ok {
-			continue
+			return nil
 		}
 
 		if err := setFieldFromString(fieldVal, envVal); err != nil {
-			return fmt.Errorf("field %s: %w", field.Name, err)
+			return fmt.Errorf("field %s: %w", path, err)
 		}
-	}
 
-	return nil
+		return nil
+	})
 }

@@ -10,6 +10,40 @@ import (
 
 var durationType = reflect.TypeOf(time.Duration(0))
 
+// fieldVisitor is called for every field discovered by walkFields, in
+// depth-first order (a nested struct's own fields are visited before the
+// struct field itself). path is the dotted path from the root struct,
+// e.g. "DB.Host" for a Host field inside a nested DB struct.
+type fieldVisitor func(field reflect.StructField, fieldVal reflect.Value, path string) error
+
+// walkFields recurses through v's fields (including nested and embedded
+// structs), calling visit for each one. It centralizes the struct-walking
+// logic shared by the env, flag, default, and validation overlay passes.
+func walkFields(v reflect.Value, path string, visit fieldVisitor) error {
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldVal := v.Field(i)
+
+		fieldPath := field.Name
+		if path != "" {
+			fieldPath = path + "." + fieldPath
+		}
+
+		if fieldVal.Kind() == reflect.Struct {
+			if err := walkFields(fieldVal, fieldPath, visit); err != nil {
+				return err
+			}
+		}
+
+		if err := visit(field, fieldVal, fieldPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // structValue validates that out is a non-nil pointer to a struct and
 // returns the dereferenced struct value.
 func structValue(out interface{}) (reflect.Value, error) {
