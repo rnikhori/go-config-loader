@@ -111,6 +111,31 @@ if err := config.Load("config.yaml", &cfg); err != nil {
 
 A default satisfies a required field as long as it leaves the field non-zero, since validation runs after defaults are applied.
 
+## Watching for changes
+
+`Watch` loads the file once, then watches it for changes (using [fsnotify](https://github.com/fsnotify/fsnotify)) and reloads it in place whenever it changes:
+
+```go
+var cfg AppConfig
+stop, err := config.Watch("config.yaml", &cfg, os.Args[1:], func(err error) {
+	if err != nil {
+		log.Printf("reload failed: %v", err)
+		return
+	}
+	log.Printf("config reloaded: %+v", cfg)
+})
+if err != nil {
+	log.Fatal(err)
+}
+defer stop()
+```
+
+Every reload runs the same pipeline as `LoadWithFlags` — **env var and command-line flag overlays are reapplied on every reload**, not just the initial load, so a flag passed at startup or an env var set in the process's environment continues to take precedence over whatever the file now says. Pass `nil` for `args` to skip flag parsing, matching `Load`'s behavior.
+
+Watch debounces rapid bursts of filesystem events (common when editors save via a temp-file-plus-rename) into a single reload, and watches the file's containing directory so renames are picked up correctly. Call the returned `stop` function to stop watching and release the underlying OS resources; after `stop` returns, `onChange` will not be called again (though a reload already in progress may still finish).
+
+`out` is mutated in place on every reload — if your program reads `cfg` from multiple goroutines, guard access with a mutex or copy it inside `onChange` before use.
+
 ## Supported field kinds
 
 Besides strings, bools, and numeric types, the following kinds are supported for file parsing, env overrides, and defaults:
