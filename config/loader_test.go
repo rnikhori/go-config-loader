@@ -183,6 +183,71 @@ func TestLoadSliceAndDurationFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoadFormatUnsupportedFormat(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "port: 8080\n")
+
+	var cfg testAppConfig
+	if err := LoadFormat(path, Format("xml"), &cfg); err == nil {
+		t.Fatal("expected error for unsupported format, got nil")
+	}
+}
+
+func TestLoadEmptyFile(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "")
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error for empty file: %v", err)
+	}
+	if cfg.Port != 0 || cfg.Host != "" {
+		t.Fatalf("expected zero-value config for empty file, got %+v", cfg)
+	}
+}
+
+func TestLoadEmptyJSONObject(t *testing.T) {
+	path := writeTempFile(t, "config.json", "{}")
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error for empty JSON object: %v", err)
+	}
+	if cfg.Port != 0 || cfg.Host != "" {
+		t.Fatalf("expected zero-value config for empty JSON object, got %+v", cfg)
+	}
+}
+
+func TestLoadInvalidYAMLSyntax(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "port: [unterminated\n")
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err == nil {
+		t.Fatal("expected error for malformed YAML, got nil")
+	}
+}
+
+func TestLoadInvalidJSONSyntax(t *testing.T) {
+	path := writeTempFile(t, "config.json", "{not valid json")
+
+	var cfg testAppConfig
+	if err := Load(path, &cfg); err == nil {
+		t.Fatal("expected error for malformed JSON, got nil")
+	}
+}
+
+func TestLoadEnvOverrideUnsupportedKindErrors(t *testing.T) {
+	type cfgType struct {
+		Data map[string]string `yaml:"data" env:"TEST_UNSUPPORTED_KIND"`
+	}
+
+	path := writeTempFile(t, "config.yaml", "data: {}\n")
+	t.Setenv("TEST_UNSUPPORTED_KIND", "x")
+
+	var cfg cfgType
+	if err := Load(path, &cfg); err == nil {
+		t.Fatal("expected error for env override of unsupported field kind, got nil")
+	}
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	var cfg testAppConfig
 	if err := Load(filepath.Join(t.TempDir(), "missing.yaml"), &cfg); err == nil {
