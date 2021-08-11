@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -252,6 +253,14 @@ func TestLoadMissingFile(t *testing.T) {
 	var cfg testAppConfig
 	if err := Load(filepath.Join(t.TempDir(), "missing.yaml"), &cfg); err == nil {
 		t.Fatal("expected error for missing file, got nil")
+	}
+}
+
+func TestLoadMissingFileWrapsErrNotExist(t *testing.T) {
+	var cfg testAppConfig
+	err := Load(filepath.Join(t.TempDir(), "missing.yaml"), &cfg)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected error wrapping os.ErrNotExist, got: %v", err)
 	}
 }
 
