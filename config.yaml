@@ -1,3 +1,9 @@
 port: 8080
 host: localhost
 debug: false
+tags:
+  - web
+  - prod
+db:
+  host: db.internal
+  port: 5432
