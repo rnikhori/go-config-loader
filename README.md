@@ -6,8 +6,8 @@ Loads configuration from a YAML or JSON file into a struct, then overlays matchi
 
 ```go
 type AppConfig struct {
-	Port  int    `yaml:"port" env:"PORT"`
-	Host  string `yaml:"host" env:"HOST"`
+	Port  int    `yaml:"port" env:"PORT" default:"8080"`
+	Host  string `yaml:"host" env:"HOST" validate:"required"`
 	Debug bool   `yaml:"debug" env:"DEBUG"`
 }
 
@@ -17,7 +17,7 @@ if err := config.Load("config.yaml", &cfg); err != nil {
 }
 ```
 
-`config.Load` reads `config.yaml`, unmarshals it into `cfg`, then checks each field's `env` tag and, if that environment variable is set, overrides the field's value.
+`config.Load` reads `config.yaml` (or `.json`), unmarshals it into `cfg`, checks each field's `env` tag and overrides it if that environment variable is set, then fills any still-zero field from its `default` tag, and finally checks `validate:"required"` tags. See the sections below for the full tag reference, the command-line flag overlay, nested structs, and `Watch`.
 
 ## File formats
 
@@ -152,24 +152,28 @@ type AppConfig struct {
 }
 ```
 
-## Running
+## Running the demo
+
+`main.go` loads `config.yaml` into a nested `AppConfig` (which embeds a `DBConfig`), using `default`, `env`, and `flag` tags throughout, then intentionally loads a second, incomplete config to show the `*config.MissingFieldsError` output:
 
 ```sh
 go run .
 ```
 
-With `config.yaml` containing `port: 8080`, `host: localhost`, `debug: false`, this prints:
-
 ```
-Loaded config: {Port:8080 Host:localhost Debug:false}
+Loaded config: {Port:8080 Host:localhost Debug:false Tags:[web prod] Timeout:30s DB:{Host:db.internal Port:5432}}
+
+Try: PORT=9090 go run .                 — env var override
+Try: go run . -port=9191                — flag override (highest precedence)
+Try: go run . -db-host=db.example.com    — override a nested field
+
+--- Demonstrating a validation error ---
+Got expected error: missing required fields: [Host Port]
 ```
 
-Override a value via environment variable:
+Try the suggested overrides, including one on the nested `DB.Host` field via its `flag:"db-host"` tag:
 
 ```sh
-PORT=9090 DEBUG=true go run .
-```
-
-```
-Loaded config: {Port:9090 Host:localhost Debug:true}
+go run . -port=9191 -db-host=db.example.com
+PORT=9090 go run .
 ```
