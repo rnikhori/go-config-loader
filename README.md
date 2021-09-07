@@ -19,6 +19,19 @@ if err := config.Load("config.yaml", &cfg); err != nil {
 
 `config.Load` reads `config.yaml` (or `.json`), unmarshals it into `cfg`, checks each field's `env` tag and overrides it if that environment variable is set, then fills any still-zero field from its `default` tag, and finally checks `validate:"required"` tags. See the sections below for the full tag reference, the command-line flag overlay, nested structs, and `Watch`.
 
+## Tag reference
+
+| Tag                    | Purpose                                                              | Layer      |
+|-------------------------|-----------------------------------------------------------------------|------------|
+| `yaml:"name"`           | Field name when parsing a YAML file                                   | file       |
+| `json:"name"`           | Field name when parsing a JSON file                                   | file       |
+| `env:"NAME"`            | Environment variable that overrides the field                         | env        |
+| `flag:"name"`           | Command-line flag that overrides the field (via `LoadWithFlags`)      | flag       |
+| `default:"..."`         | Value applied if the field is still zero after file/env/flags         | default    |
+| `validate:"required"`   | Field must be non-zero after every other layer, or Load errors        | validation |
+
+All of these are recognized on nested (including embedded) struct fields, at any depth.
+
 ## File formats
 
 `Load` detects the file format from its extension:
