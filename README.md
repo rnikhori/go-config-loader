@@ -2,6 +2,18 @@
 
 Loads configuration from a YAML or JSON file into a struct, then overlays matching environment variables on top (env vars win).
 
+## Installation
+
+```sh
+go get github.com/rnikhori/go-config-loader
+```
+
+```go
+import "github.com/rnikhori/go-config-loader/config"
+```
+
+Requires Go 1.23 or later.
+
 ## Usage
 
 ```go
