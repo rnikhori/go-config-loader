@@ -14,6 +14,22 @@ import "github.com/rnikhori/go-config-loader/config"
 
 Requires Go 1.23 or later.
 
+## Precedence
+
+Four layers combine into one config struct, each able to override the one below it:
+
+```
+flags             (LoadWithFlags only, highest precedence)
+  ↓ overrides
+env vars
+  ↓ overrides
+file (YAML/JSON)
+  ↓ overrides
+defaults          (only fills fields still at their zero value, lowest precedence)
+```
+
+A layer only touches a field if it has something to say about it (an env var is set, a flag was passed, the file has that key); otherwise the field keeps whatever the layer below it produced. Validation (`validate:"required"`) runs last, after all four layers, and checks the final result.
+
 ## Usage
 
 ```go
