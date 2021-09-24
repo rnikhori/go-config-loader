@@ -39,7 +39,7 @@ func LoadFormat(path string, format Format, out interface{}) error {
 func LoadWithFlags(path string, out interface{}, args []string) error {
 	format, err := detectFormat(path)
 	if err != nil {
-		return fmt.Errorf("config: %w", err)
+		return wrapStage("detect format", err)
 	}
 
 	return LoadFormatWithFlags(path, format, out, args)
@@ -49,39 +49,39 @@ func LoadWithFlags(path string, out interface{}, args []string) error {
 // with the flag overlay behavior of LoadWithFlags.
 func LoadFormatWithFlags(path string, format Format, out interface{}, args []string) error {
 	if _, err := structValue(out); err != nil {
-		return fmt.Errorf("config: %w", err)
+		return wrapStage("validate target", err)
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("config: read file: %w", err)
+		return wrapStage("read file", err)
 	}
 
 	switch format {
 	case FormatYAML:
 		if err := yaml.Unmarshal(data, out); err != nil {
-			return fmt.Errorf("config: parse yaml: %w", err)
+			return wrapStage("parse yaml", err)
 		}
 	case FormatJSON:
 		if err := json.Unmarshal(data, out); err != nil {
-			return fmt.Errorf("config: parse json: %w", err)
+			return wrapStage("parse json", err)
 		}
 	default:
 		return fmt.Errorf("config: unsupported format %q", format)
 	}
 
 	if err := applyEnvOverrides(out); err != nil {
-		return fmt.Errorf("config: apply env overrides: %w", err)
+		return wrapStage("apply env overrides", err)
 	}
 
 	if args != nil {
 		if err := applyFlagOverrides(out, args); err != nil {
-			return fmt.Errorf("config: apply flag overrides: %w", err)
+			return wrapStage("apply flag overrides", err)
 		}
 	}
 
 	if err := applyDefaults(out); err != nil {
-		return fmt.Errorf("config: apply defaults: %w", err)
+		return wrapStage("apply defaults", err)
 	}
 
 	if err := validateRequired(out); err != nil {
