@@ -116,6 +116,42 @@ func TestWatchStopPreventsFurtherCallbacks(t *testing.T) {
 	}
 }
 
+func TestWatchReloadsJSONFile(t *testing.T) {
+	path := writeTempFile(t, "config.json", `{"port": 8080, "host": "initial"}`)
+
+	var cfg testWatchConfig
+	changes := make(chan error, 10)
+
+	stop, err := Watch(path, &cfg, nil, func(err error) {
+		changes <- err
+	})
+	if err != nil {
+		t.Fatalf("Watch returned error: %v", err)
+	}
+	defer stop()
+
+	if cfg.Host != "initial" {
+		t.Fatalf("initial load: Host = %q, want initial", cfg.Host)
+	}
+
+	if err := os.WriteFile(path, []byte(`{"port": 9090, "host": "updated"}`), 0o644); err != nil {
+		t.Fatalf("write updated file: %v", err)
+	}
+
+	select {
+	case err := <-changes:
+		if err != nil {
+			t.Fatalf("onChange called with error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for reload callback")
+	}
+
+	if cfg.Port != 9090 || cfg.Host != "updated" {
+		t.Fatalf("after reload: unexpected config: %+v", cfg)
+	}
+}
+
 func TestWatchInvalidPathErrors(t *testing.T) {
 	var cfg testWatchConfig
 	if _, err := Watch("does-not-exist.yaml", &cfg, nil, func(error) {}); err == nil {
