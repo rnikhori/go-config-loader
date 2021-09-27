@@ -79,6 +79,22 @@ func TestLoadWithFlagsNilArgsBehavesLikeLoad(t *testing.T) {
 	}
 }
 
+func TestLoadFormatWithFlagsJSON(t *testing.T) {
+	path := writeTempFile(t, "config.cfg", `{"port": 8080, "host": "jsonhost"}`)
+
+	var cfg testFlagConfig
+	if err := LoadFormatWithFlags(path, FormatJSON, &cfg, []string{"-port=5555"}); err != nil {
+		t.Fatalf("LoadFormatWithFlags returned error: %v", err)
+	}
+
+	if cfg.Port != 5555 {
+		t.Errorf("Port = %d, want 5555 (flag beats JSON file value)", cfg.Port)
+	}
+	if cfg.Host != "jsonhost" {
+		t.Errorf("Host = %q, want jsonhost (no flag passed for host)", cfg.Host)
+	}
+}
+
 func TestLoadWithFlagsUnknownFlagErrors(t *testing.T) {
 	path := writeTempFile(t, "config.yaml", "port: 8080\n")
 
