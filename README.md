@@ -2,6 +2,17 @@
 
 Loads configuration from a YAML or JSON file into a struct, then overlays matching environment variables on top (env vars win).
 
+## Features at a glance
+
+- YAML and JSON file support, selected by extension or explicitly
+- Env var overrides via `env:"NAME"`
+- Command-line flag overrides via `flag:"name"`, highest precedence
+- `default:"..."` values for fields left unset by every other layer
+- `validate:"required"` fields, with every missing field reported at once
+- Nested (and embedded) structs at any depth, for every layer above
+- `[]string` and `time.Duration` field support, beyond the basic scalar kinds
+- `Watch` for hot-reloading a file on change, via fsnotify
+
 ## Installation
 
 ```sh
