@@ -229,3 +229,15 @@ Try the suggested overrides, including one on the nested `DB.Host` field via its
 go run . -port=9191 -db-host=db.example.com
 PORT=9090 go run .
 ```
+
+## Testing
+
+```sh
+go test ./...
+```
+
+`Watch` is exercised with real filesystem events and short timeouts, so when debugging a hang or flake run it with `-race` and a generous `-timeout`:
+
+```sh
+go test ./... -race -timeout 60s
+```
