@@ -22,7 +22,9 @@ func applyFlagOverrides(out interface{}, args []string) error {
 	fs.SetOutput(io.Discard)
 
 	bindings := map[string]reflect.Value{}
-	registerFlags(fs, v, bindings)
+	if err := registerFlags(fs, v, bindings); err != nil {
+		return err
+	}
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
@@ -51,11 +53,18 @@ func applyFlagOverrides(out interface{}, args []string) error {
 // string flag regardless of the underlying field type; the raw value is
 // converted by setFieldFromString once we know which flags were actually
 // set by the caller.
-func registerFlags(fs *flag.FlagSet, v reflect.Value, bindings map[string]reflect.Value) {
-	walkFields(v, "", func(field reflect.StructField, fieldVal reflect.Value, path string) error {
+//
+// Two fields tagged with the same flag name return an error rather than
+// letting the underlying flag.FlagSet panic on a redefinition.
+func registerFlags(fs *flag.FlagSet, v reflect.Value, bindings map[string]reflect.Value) error {
+	return walkFields(v, "", func(field reflect.StructField, fieldVal reflect.Value, path string) error {
 		flagName := field.Tag.Get("flag")
 		if flagName == "" {
 			return nil
+		}
+
+		if _, exists := bindings[flagName]; exists {
+			return fmt.Errorf("flag %q registered by more than one field", flagName)
 		}
 
 		bindings[flagName] = fieldVal

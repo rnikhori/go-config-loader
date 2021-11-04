@@ -95,6 +95,19 @@ func TestLoadFormatWithFlagsJSON(t *testing.T) {
 	}
 }
 
+type testDuplicateFlagConfig struct {
+	A string `yaml:"a" flag:"same"`
+	B string `yaml:"b" flag:"same"`
+}
+
+func TestApplyFlagOverridesDuplicateFlagNameErrors(t *testing.T) {
+	var cfg testDuplicateFlagConfig
+	err := applyFlagOverrides(&cfg, []string{"-same=x"})
+	if err == nil {
+		t.Fatal("expected error for duplicate flag name, got nil")
+	}
+}
+
 func TestLoadWithFlagsUnknownFlagErrors(t *testing.T) {
 	path := writeTempFile(t, "config.yaml", "port: 8080\n")
 
