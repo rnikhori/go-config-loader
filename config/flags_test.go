@@ -108,6 +108,36 @@ func TestApplyFlagOverridesDuplicateFlagNameErrors(t *testing.T) {
 	}
 }
 
+type testBoolFlagConfig struct {
+	Debug bool `yaml:"debug" flag:"debug"`
+}
+
+// TestBoolFlagRequiresExplicitValue documents a real constraint: because
+// every flag is registered as a string flag (so setFieldFromString can
+// convert it to the field's actual type later), a bool field cannot be
+// toggled with a standalone -debug the way flag.Bool would allow. It
+// must be passed as -debug=true.
+func TestBoolFlagRequiresExplicitValue(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "debug: false\n")
+
+	var cfg testBoolFlagConfig
+	if err := LoadWithFlags(path, &cfg, []string{"-debug"}); err == nil {
+		t.Fatal("expected error for standalone -debug (no value), got nil")
+	}
+}
+
+func TestBoolFlagWithExplicitValue(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "debug: false\n")
+
+	var cfg testBoolFlagConfig
+	if err := LoadWithFlags(path, &cfg, []string{"-debug=true"}); err != nil {
+		t.Fatalf("LoadWithFlags returned error: %v", err)
+	}
+	if !cfg.Debug {
+		t.Error("Debug = false, want true")
+	}
+}
+
 func TestLoadWithFlagsUnknownFlagErrors(t *testing.T) {
 	path := writeTempFile(t, "config.yaml", "port: 8080\n")
 
