@@ -241,3 +241,10 @@ go test ./...
 ```sh
 go test ./... -race -timeout 60s
 ```
+
+## Known limitations
+
+- **Defaults vs. explicit zero.** A `default:"..."` tag applies whenever a field is at its zero value, which is indistinguishable from an explicit zero written in the file (e.g. `port: 0`). Both end up with the default applied. Use a pointer type or a non-zero sentinel if you need to tell them apart.
+- **Bool flags need `=value`.** Every `flag:"name"` is registered internally as a string flag (so its raw value can be converted to the field's real type later), so a bool field cannot be toggled with a standalone `-debug` the way `flag.Bool` allows — pass `-debug=true` explicitly.
+- **One field per flag name.** Two fields tagged with the same `flag:"name"` return an error from `LoadWithFlags` rather than silently binding to only one of them.
+- **`Watch` mutates `out` in place.** If your program reads the config from more than one goroutine, guard it with a mutex or copy it out inside `onChange`.
