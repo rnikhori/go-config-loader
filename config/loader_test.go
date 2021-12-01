@@ -249,6 +249,37 @@ func TestLoadEnvOverrideUnsupportedKindErrors(t *testing.T) {
 	}
 }
 
+type testNestedJSONConfig struct {
+	Name string           `json:"name" env:"TEST_JSON_APP_NAME"`
+	DB   testJSONDBConfig `json:"db"`
+}
+
+type testJSONDBConfig struct {
+	Host string `json:"host" env:"TEST_JSON_DB_HOST"`
+	Port int    `json:"port" env:"TEST_JSON_DB_PORT"`
+}
+
+func TestLoadNestedStructJSON(t *testing.T) {
+	path := writeTempFile(t, "config.json", `{"name": "myapp", "db": {"host": "dbhost", "port": 5432}}`)
+
+	t.Setenv("TEST_JSON_DB_PORT", "6543")
+
+	var cfg testNestedJSONConfig
+	if err := Load(path, &cfg); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if cfg.Name != "myapp" {
+		t.Errorf("Name = %q, want myapp", cfg.Name)
+	}
+	if cfg.DB.Host != "dbhost" {
+		t.Errorf("DB.Host = %q, want dbhost (from file)", cfg.DB.Host)
+	}
+	if cfg.DB.Port != 6543 {
+		t.Errorf("DB.Port = %d, want 6543 (env override)", cfg.DB.Port)
+	}
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	var cfg testAppConfig
 	if err := Load(filepath.Join(t.TempDir(), "missing.yaml"), &cfg); err == nil {
