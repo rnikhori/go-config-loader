@@ -66,6 +66,23 @@ func TestLoadWithFlagsNestedStruct(t *testing.T) {
 	}
 }
 
+func TestLoadWithFlagsEmptyNonNilArgsRegistersFlags(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "port: 8080\nhost: filehost\n")
+
+	var cfg testFlagConfig
+	if err := LoadWithFlags(path, &cfg, []string{}); err != nil {
+		t.Fatalf("LoadWithFlags returned error: %v", err)
+	}
+
+	if cfg.Port != 8080 || cfg.Host != "filehost" {
+		t.Fatalf("unexpected config with empty args: %+v", cfg)
+	}
+
+	if err := LoadWithFlags(path, &cfg, []string{"-nope=1"}); err == nil {
+		t.Fatal("expected error: an empty (non-nil) args should still register and validate flags")
+	}
+}
+
 func TestLoadWithFlagsNilArgsBehavesLikeLoad(t *testing.T) {
 	path := writeTempFile(t, "config.yaml", "port: 8080\nhost: filehost\n")
 
