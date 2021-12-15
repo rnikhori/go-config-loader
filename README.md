@@ -230,6 +230,22 @@ go run . -port=9191 -db-host=db.example.com
 PORT=9090 go run .
 ```
 
+## Project layout
+
+The `config` package is split by responsibility rather than kept as one file:
+
+| File                    | Responsibility                                              |
+|--------------------------|--------------------------------------------------------------|
+| `loader.go`              | `Load`/`LoadFormat`/`LoadWithFlags`/`LoadFormatWithFlags`, the pipeline that wires every layer together |
+| `format.go`              | `Format` type and extension-based format detection           |
+| `env.go`                 | The `env:"NAME"` overlay layer                                |
+| `flags.go`               | The `flag:"name"` overlay layer, built on the standard `flag` package |
+| `defaults.go`            | The `default:"..."` layer                                    |
+| `validate.go`            | The `validate:"required"` pass and `MissingFieldsError`       |
+| `watch.go`               | `Watch`, built on fsnotify                                    |
+| `reflect_util.go`        | Shared reflection helpers: `walkFields`, `structValue`, `setFieldFromString` |
+| `errors.go`              | `wrapStage`, the shared pipeline error-wrapping helper        |
+
 ## Testing
 
 ```sh
