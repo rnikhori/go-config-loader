@@ -152,6 +152,38 @@ func TestWatchReloadsJSONFile(t *testing.T) {
 	}
 }
 
+func TestWatchReloadErrorPropagatedToCallback(t *testing.T) {
+	path := writeTempFile(t, "config.yaml", "port: 8080\nhost: initial\n")
+
+	var cfg testWatchConfig
+	changes := make(chan error, 10)
+
+	stop, err := Watch(path, &cfg, nil, func(err error) {
+		changes <- err
+	})
+	if err != nil {
+		t.Fatalf("Watch returned error: %v", err)
+	}
+	defer stop()
+
+	if err := os.WriteFile(path, []byte("port: [unterminated\n"), 0o644); err != nil {
+		t.Fatalf("write malformed file: %v", err)
+	}
+
+	select {
+	case err := <-changes:
+		if err == nil {
+			t.Fatal("expected onChange to be called with a non-nil error for malformed YAML")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for reload callback")
+	}
+
+	if cfg.Host != "initial" {
+		t.Errorf("Host = %q, want initial (failed reload should not have mutated out)", cfg.Host)
+	}
+}
+
 func TestWatchInvalidPathErrors(t *testing.T) {
 	var cfg testWatchConfig
 	if _, err := Watch("does-not-exist.yaml", &cfg, nil, func(error) {}); err == nil {
